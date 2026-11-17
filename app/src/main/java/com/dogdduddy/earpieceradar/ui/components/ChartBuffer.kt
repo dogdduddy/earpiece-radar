@@ -37,13 +37,14 @@ class ChartBuffer(var windowNs: Long) {
         if (buf.isEmpty()) return ChartSnapshot.EMPTY
         val nowNs = buf.last().sample.timestampNs
         val stride = ((buf.size + maxPoints - 1) / maxPoints).coerceAtLeast(1)
-        val n = (buf.size + stride - 1) / stride
+        val n = (buf.size + stride - 1) / stride + 1  // +1: 마지막(최신) 샘플은 항상 포함
         val t = FloatArray(n); val x = FloatArray(n); val y = FloatArray(n)
         val z = FloatArray(n); val mag = FloatArray(n); val d = FloatArray(n)
         var j = 0
         var i = 0
+        val lastIdx = buf.size - 1
         for (m in buf) {
-            if (i % stride == 0 && j < n) {
+            if ((i % stride == 0 || i == lastIdx) && j < n) {
                 t[j] = ((m.sample.timestampNs - nowNs) / 1e9).toFloat()
                 x[j] = m.sample.x; y[j] = m.sample.y; z[j] = m.sample.z
                 mag[j] = m.sample.magnitude; d[j] = m.delta.toFloat()

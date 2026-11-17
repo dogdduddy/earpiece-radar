@@ -38,6 +38,7 @@ data class ChartSeries(
     val xs: FloatArray,
     val ys: FloatArray,
     val drawPoints: Boolean = false,
+    val dashed: Boolean = false,
 )
 
 /**
@@ -152,7 +153,13 @@ fun LineChart(
                     if (!started) { path.moveTo(p.x, p.y); started = true } else path.lineTo(p.x, p.y)
                     if (s.drawPoints) drawCircle(s.color, 5f, p)
                 }
-                drawPath(path, s.color, style = Stroke(width = 2.2f))
+                drawPath(
+                    path, s.color,
+                    style = Stroke(
+                        width = 2.2f,
+                        pathEffect = if (s.dashed) PathEffect.dashPathEffect(floatArrayOf(8f, 8f)) else null,
+                    ),
+                )
             }
 
             if (yLabel.isNotEmpty()) {

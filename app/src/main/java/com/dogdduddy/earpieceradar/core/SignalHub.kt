@@ -63,7 +63,7 @@ class SignalHub(
             engine.baseline = _baseline.value
             engine.process(s)
         }
-        .shareIn(scope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 1500), replay = 1)
+        .shareIn(scope, SharingStarted.WhileSubscribed(stopTimeoutMillis = 1500), replay = 0)
 
     /**
      * durationSeconds 동안 샘플을 모아 B0·σ 를 갱신한다. 완료되면 Baseline 반환.
