@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -54,7 +55,7 @@ fun SimpleScreen(vm: SimpleViewModel) {
     var showSheet by remember { mutableStateOf(false) }
     LifecycleResumeEffect(Unit) { vm.start(); onPauseOrDispose { vm.stop() } }
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().navigationBarsPadding()) {
         TopAppBar(
             title = { Text("이어피스 레이더") },
             actions = { IconButton(onClick = { showSheet = true }) { Icon(Icons.Filled.Settings, contentDescription = "설정") } },
@@ -70,10 +71,12 @@ fun SimpleScreen(vm: SimpleViewModel) {
             val m = ui.current
             val hasBaseline = ui.baseline != null
             val level = if (hasBaseline) ui.recentLevel else null
-            val color = level?.color() ?: MaterialTheme.colorScheme.surfaceVariant
+            // 영점 전: 테마의 불투명 쌍(surfaceVariant / onSurfaceVariant)으로 대비 보장. 레벨 상태: 레벨 색 틴트 + 레벨 색 글자.
+            val cardBg = level?.color()?.copy(alpha = 0.22f) ?: MaterialTheme.colorScheme.surfaceVariant
+            val textColor = level?.color() ?: MaterialTheme.colorScheme.onSurfaceVariant
 
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(color.copy(alpha = 0.22f)).padding(24.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(cardBg).padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
@@ -84,14 +87,14 @@ fun SimpleScreen(vm: SimpleViewModel) {
                         else -> "이상 없음"
                     },
                     fontSize = 30.sp, fontWeight = FontWeight.Bold,
-                    color = level?.color() ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = textColor,
                 )
                 Text(
                     if (hasBaseline && m != null) m.deltaUsed.f(1) else "—",
                     fontSize = 88.sp, fontWeight = FontWeight.Bold,
-                    color = level?.color() ?: MaterialTheme.colorScheme.onSurface,
+                    color = textColor,
                 )
-                Text("자기장 변화 (µT)", style = MaterialTheme.typography.labelLarge)
+                Text("자기장 변화 (µT)", style = MaterialTheme.typography.labelLarge, color = textColor)
                 if (hasBaseline) {
                     Spacer(Modifier.height(6.dp))
                     Text("최근 3초 최대 ${ui.recentMaxDelta.f(1)} µT · 기준 ${ui.active.tuning.deltaThresholdUt.f(1)} µT", style = MaterialTheme.typography.bodySmall)
@@ -135,6 +138,7 @@ fun SimpleScreen(vm: SimpleViewModel) {
                 Text("장소: ${ui.active.name}", style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(onClick = { showSheet = true }) { Text("장소/감도 설정") }
             }
+            Spacer(Modifier.height(8.dp))
         }
     }
 
