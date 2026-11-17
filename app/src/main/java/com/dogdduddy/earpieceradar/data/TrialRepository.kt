@@ -2,6 +2,7 @@ package com.dogdduddy.earpieceradar.data
 
 import android.content.Context
 import com.dogdduddy.earpieceradar.signal.Baseline
+import com.dogdduddy.earpieceradar.signal.DetectionMode
 import com.dogdduddy.earpieceradar.signal.MagSample
 import com.dogdduddy.earpieceradar.signal.Metrics
 import com.dogdduddy.earpieceradar.signal.TrialStats
@@ -54,6 +55,8 @@ class TrialRepository(context: Context, private val scope: CoroutineScope) {
     suspend fun save(
         config: TrialConfig,
         sensorType: String,
+        profileName: String,
+        mode: DetectionMode,
         baseline: Baseline,
         samples: List<MagSample>,
         stats: TrialStats,
@@ -66,6 +69,8 @@ class TrialRepository(context: Context, private val scope: CoroutineScope) {
             createdAtEpochMs = System.currentTimeMillis(),
             config = config,
             sensorType = sensorType,
+            profileName = profileName,
+            mode = mode,
             baseline = BaselineDto.from(baseline),
             stats = StatsDto.from(stats),
             rawFile = rawName,
@@ -105,19 +110,22 @@ class TrialRepository(context: Context, private val scope: CoroutineScope) {
             samples.forEachIndexed { i, s ->
                 val d = Metrics.delta(s, baseline)
                 val z = Metrics.zScore(d, baseline.sigma)
-                w.write(rawLine(trialId, i, s, t0, d, z)); w.newLine()
+                w.write(rawLine(trialId, i, s, t0, d, z, Metrics.deltaMagnitude(s, baseline))); w.newLine()
             }
         }
     }
 
     companion object {
-        const val RAW_HEADER = "trial_id,idx,timestamp_ns,t_rel_ms,x_ut,y_ut,z_ut,mag_ut,accuracy,delta_ut,z_score"
+        const val RAW_HEADER =
+            "trial_id,idx,timestamp_ns,t_rel_ms,x_ut,y_ut,z_ut,mag_ut,accuracy,delta_ut,z_score," +
+                "bias_x,bias_y,bias_z,cal_mag_ut,delta_mag_ut"
 
-        fun rawLine(trialId: String, i: Int, s: MagSample, t0: Long, delta: Double, z: Double): String =
+        fun rawLine(trialId: String, i: Int, s: MagSample, t0: Long, delta: Double, z: Double, deltaMag: Double = 0.0): String =
             String.format(
-                Locale.US, "%s,%d,%d,%.3f,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%.3f",
+                Locale.US, "%s,%d,%d,%.3f,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%.3f,%.3f,%.3f,%.3f,%.4f,%.4f",
                 trialId, i, s.timestampNs, (s.timestampNs - t0) / 1e6,
                 s.x, s.y, s.z, s.magnitude, s.accuracy, delta, z,
+                s.bx, s.by, s.bz, s.calMagnitude, deltaMag,
             )
     }
 }

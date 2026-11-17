@@ -6,6 +6,7 @@ import com.dogdduddy.earpieceradar.data.StatsDto
 import com.dogdduddy.earpieceradar.data.Trial
 import com.dogdduddy.earpieceradar.data.TrialConfig
 import com.dogdduddy.earpieceradar.signal.DetectionLevel
+import com.dogdduddy.earpieceradar.signal.DetectionMode
 import com.dogdduddy.earpieceradar.signal.MagSample
 import com.dogdduddy.earpieceradar.signal.MetricSample
 import com.dogdduddy.earpieceradar.ui.components.ChartBuffer
@@ -15,7 +16,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ChartBufferAndSeriesTest {
-    private fun ms(tNs: Long, x: Float) = MetricSample(MagSample(tNs, x, 0f, 0f, 3), x.toDouble(), 0.0, 0.0, 100.0, DetectionLevel.NONE)
+    private fun ms(tNs: Long, x: Float) = MetricSample(MagSample(tNs, x, 0f, 0f, 3), x.toDouble(), 0.0, 0.0, 0.0, 100.0, DetectionLevel.NONE, DetectionMode.VECTOR)
 
     @Test
     fun `chart buffer evicts old samples and downsamples`() {
@@ -31,8 +32,8 @@ class ChartBufferAndSeriesTest {
     @Test
     fun `results series groups by magnet and averages repeated distances`() {
         fun t(magnet: MagnetType, d: Double, mean: Double) = Trial(
-            "id${(Math.random() * 1e6).toInt()}", 0L, TrialConfig(magnet = magnet, distanceCm = d), "x",
-            BaselineDto(0.0, 0.0, 0.0, 0.1, 1), StatsDto(1, 0.0, 0.0, mean, mean, 0.0, 0.0, 0.0, 0.0), "f",
+            id = "id${(Math.random() * 1e6).toInt()}", createdAtEpochMs = 0L, config = TrialConfig(magnet = magnet, distanceCm = d), sensorType = "x",
+            baseline = BaselineDto(0.0, 0.0, 0.0, 0.1, 1), stats = StatsDto(1, 0.0, 0.0, mean, mean, 0.0, 0.0, 0.0, 0.0), rawFile = "f",
         )
         val series = ResultsViewModel.buildSeries(listOf(
             t(MagnetType.D3X1, 3.0, 4.0), t(MagnetType.D3X1, 3.0, 6.0), t(MagnetType.D3X1, 1.0, 40.0),

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import com.dogdduddy.earpieceradar.core.SignalHub
 import com.dogdduddy.earpieceradar.data.CsvExporter
+import com.dogdduddy.earpieceradar.data.ProfileRepository
 import com.dogdduddy.earpieceradar.data.SettingsRepository
 import com.dogdduddy.earpieceradar.data.TrialRepository
 import com.dogdduddy.earpieceradar.sensor.AndroidMagneticFieldSource
@@ -16,8 +17,9 @@ import kotlinx.coroutines.SupervisorJob
 class AppContainer(context: Context) {
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val settingsRepository = SettingsRepository(context)
+    val profileRepository = ProfileRepository(context, appScope)
     val sensorSource: MagneticFieldSource = AndroidMagneticFieldSource(context)
-    val signalHub = SignalHub(sensorSource, settingsRepository, appScope)
+    val signalHub = SignalHub(sensorSource, settingsRepository, profileRepository, appScope)
     val trialRepository = TrialRepository(context, appScope)
     val csvExporter = CsvExporter(context)
 }

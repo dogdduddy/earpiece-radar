@@ -13,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,35 +26,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.dogdduddy.earpieceradar.data.Settings
+import com.dogdduddy.earpieceradar.data.TuningDefaults
 import com.dogdduddy.earpieceradar.ui.components.SectionCard
 import com.dogdduddy.earpieceradar.ui.f
 
 @Composable
 fun SettingsScreen(vm: SettingsViewModel) {
-    val s by vm.settings.collectAsStateWithLifecycle()
+    val ui by vm.ui.collectAsStateWithLifecycle()
+    val s = ui.settings
+    val t = ui.active.tuning
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        SectionCard("탐지 임계값") {
-            NumField("Δ 임계값 (µT)", s.deltaThresholdUt.f(2), "탐지: Δ ≥ 이 값 그리고 z ≥ z 임계값") { v -> vm.update { it.copy(deltaThresholdUt = v) } }
-            NumField("z 임계값", s.zThreshold.f(1), "z = Δ / σ(영점 노이즈)") { v -> vm.update { it.copy(zThreshold = v) } }
-            NumField("AC RMS 임계값 (µT)", s.acThresholdUt.f(2), "교류 자기장(넥루프) 탐지. 절반 이상이면 '의심'") { v -> vm.update { it.copy(acThresholdUt = v) } }
-            IntField("디바운스 (연속 샘플 수)", s.debounceSamples, "상태가 바뀌려면 같은 판정이 N 샘플 연속되어야 함") { v -> vm.update { it.copy(debounceSamples = v) } }
+        SectionCard("모드") {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("개발자 모드")
+                    Text("끄면 선생님용 단일 화면만 보입니다.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = s.developerMode, onCheckedChange = vm::setDeveloperMode)
+            }
+        }
+
+        ProfileSection(
+            profiles = ui.profiles, active = ui.active, currentBaseline = ui.baseline,
+            onSelect = vm::selectProfile, onCreate = vm::createProfile, onRename = vm::renameProfile, onDelete = vm::deleteProfile,
+            onSaveBaseline = vm::saveBaselineToProfile, onClearBaseline = vm::clearProfileBaseline,
+            onPreset = vm::applyPreset, onMode = { m -> vm.updateTuning { it.copy(mode = m) } }, onResetTuning = vm::resetTuning,
+            showAdvancedSummary = false,
+        )
+
+        SectionCard("임계값 (프로필 '${ui.active.name}')") {
+            NumField("Δ 임계값 (µT)", t.deltaThresholdUt.f(2), "탐지: Δ ≥ 이 값 그리고 z ≥ z 임계값") { v -> vm.updateTuning { it.copy(deltaThresholdUt = v) } }
+            NumField("z 임계값", t.zThreshold.f(1), "z = Δ / σ(영점 노이즈)") { v -> vm.updateTuning { it.copy(zThreshold = v) } }
+            NumField("AC RMS 임계값 (µT)", t.acThresholdUt.f(2), "교류 자기장(넥루프) 탐지. 절반 이상이면 '의심'") { v -> vm.updateTuning { it.copy(acThresholdUt = v) } }
+            IntField("디바운스 (연속 샘플 수)", t.debounceSamples, "상태가 바뀌려면 같은 판정이 N 샘플 연속되어야 함") { v -> vm.updateTuning { it.copy(debounceSamples = v) } }
+            val d = TuningDefaults.DEVELOPER
+            Text(
+                "개발자 기본값: Δ ${d.deltaThresholdUt.f(1)} µT, z ${d.zThreshold.f(0)}, AC ${d.acThresholdUt.f(1)} µT, 디바운스 ${d.debounceSamples}, ${if (d.mode.name == "VECTOR") "벡터" else "크기"} 모드",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         SectionCard("시간") {
-            IntField("영점 측정 시간 (초)", s.calibrationSeconds, "") { v -> vm.update { it.copy(calibrationSeconds = v) } }
-            IntField("카운트다운 (초)", s.countdownSeconds, "자석을 위치에 놓는 시간") { v -> vm.update { it.copy(countdownSeconds = v) } }
-            IntField("녹화 시간 (초)", s.recordSeconds, "") { v -> vm.update { it.copy(recordSeconds = v) } }
-            IntField("AC 윈도우 (ms)", s.acWindowMs, "high-pass 롤링 윈도우 길이") { v -> vm.update { it.copy(acWindowMs = v) } }
-            IntField("그래프 창 (초)", s.chartWindowSeconds, "") { v -> vm.update { it.copy(chartWindowSeconds = v) } }
+            IntField("영점 측정 시간 (초)", s.calibrationSeconds, "") { v -> vm.updateSettings { it.copy(calibrationSeconds = v) } }
+            IntField("카운트다운 (초)", s.countdownSeconds, "자석을 위치에 놓는 시간") { v -> vm.updateSettings { it.copy(countdownSeconds = v) } }
+            IntField("녹화 시간 (초)", s.recordSeconds, "") { v -> vm.updateSettings { it.copy(recordSeconds = v) } }
+            IntField("AC 윈도우 (ms)", s.acWindowMs, "high-pass 롤링 윈도우 길이") { v -> vm.updateSettings { it.copy(acWindowMs = v) } }
+            IntField("그래프 창 (초)", s.chartWindowSeconds, "") { v -> vm.updateSettings { it.copy(chartWindowSeconds = v) } }
+            OutlinedButton(onClick = vm::resetTimings) { Text("시간 기본값으로") }
         }
-        OutlinedButton(onClick = vm::reset) { Text("기본값으로") }
-        Text(
-            "기본값: Δ 3 µT, z 5, AC 1 µT, 디바운스 5, 영점 3초, 카운트다운 3초, 녹화 5초, AC 윈도우 500ms.",
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

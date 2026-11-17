@@ -55,7 +55,8 @@ class CsvExporter(private val context: Context) {
         const val SUMMARY_HEADER =
             "trial_id,created_at,magnet,distance_cm,orientation,placement,note,sensor_type,fresh_baseline," +
                 "b0_x,b0_y,b0_z,sigma_ut,sample_count,duration_ms,sample_rate_hz," +
-                "mean_delta_ut,max_delta_ut,std_delta_ut,mean_z,ac_rms_ut,mean_mag_ut"
+                "mean_delta_ut,max_delta_ut,std_delta_ut,mean_z,ac_rms_ut,mean_mag_ut," +
+                "profile,mode,mag0_ut,sigma_mag_ut,mean_delta_mag_ut,max_delta_mag_ut"
 
         fun summaryLine(t: Trial): String {
             val c = t.config; val b = t.baseline; val s = t.stats
@@ -66,6 +67,7 @@ class CsvExporter(private val context: Context) {
                 fmt(b.b0x, 4), fmt(b.b0y, 4), fmt(b.b0z, 4), fmt(b.sigma, 4),
                 s.sampleCount.toString(), fmt(s.durationMs, 1), fmt(s.sampleRateHz, 1),
                 fmt(s.meanDelta, 4), fmt(s.maxDelta, 4), fmt(s.stdDelta, 4), fmt(s.meanZ, 3), fmt(s.acRms, 4), fmt(s.meanMagnitude, 3),
+                csv(t.profileName), t.mode.name, fmt(b.mag0, 3), fmt(b.sigmaMag, 4), fmt(s.meanDeltaMag, 4), fmt(s.maxDeltaMag, 4),
             ).joinToString(",")
         }
 

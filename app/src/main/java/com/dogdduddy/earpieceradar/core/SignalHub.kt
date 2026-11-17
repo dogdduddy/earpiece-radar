@@ -1,6 +1,8 @@
 package com.dogdduddy.earpieceradar.core
 
+import com.dogdduddy.earpieceradar.data.ProfileRepository
 import com.dogdduddy.earpieceradar.data.SettingsRepository
+import com.dogdduddy.earpieceradar.data.Tuning
 import com.dogdduddy.earpieceradar.sensor.MagneticFieldSource
 import com.dogdduddy.earpieceradar.sensor.SensorInfo
 import com.dogdduddy.earpieceradar.signal.Baseline
@@ -23,11 +25,12 @@ import kotlinx.coroutines.flow.takeWhile
 /**
  * 앱 전역 신호 허브. 센서 flow 를 공유하고(구독자가 있을 때만 리스너 등록),
  * 모든 샘플에 MetricsEngine 을 적용해 지표 스트림을 만든다.
- * 기준값(B0, σ)과 설정은 여기서 한 곳에 보관되어 모든 화면이 같은 값을 쓴다.
+ * 기준값(B0, σ)은 여기 한 곳에 보관되고, 임계값/모드는 활성 프로필에서 읽는다.
  */
 class SignalHub(
     private val source: MagneticFieldSource,
     private val settingsRepo: SettingsRepository,
+    private val profileRepo: ProfileRepository,
     scope: CoroutineScope,
 ) {
     val sensorInfo: SensorInfo? get() = source.info
@@ -42,11 +45,11 @@ class SignalHub(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private var engine = MetricsEngine(
-        settingsRepo.settings.value.acWindowNs,
-        settingsRepo.settings.value.detectorConfig(),
-    )
-    private var engineSettingsKey = settingsRepo.settings.value
+    private data class EngineKey(val acWindowNs: Long, val tuning: Tuning)
+
+    private fun currentKey() = EngineKey(settingsRepo.settings.value.acWindowNs, profileRepo.active.value.tuning)
+    private var engineKey = currentKey()
+    private var engine = MetricsEngine(engineKey.acWindowNs, engineKey.tuning.toDetectorConfig())
 
     val samples: SharedFlow<MagSample> = source.samples()
         .catch { e -> _error.value = e.message ?: "센서 오류" }
@@ -54,11 +57,11 @@ class SignalHub(
 
     val metrics: SharedFlow<MetricSample> = samples
         .map { s ->
-            val st = settingsRepo.settings.value
-            if (st != engineSettingsKey) {
-                // 설정이 바뀌면 엔진 재구성 (AC 윈도우 / 임계값 / 디바운스)
-                engine = MetricsEngine(st.acWindowNs, st.detectorConfig())
-                engineSettingsKey = st
+            val key = currentKey()
+            if (key != engineKey) {
+                // 설정/프로필이 바뀌면 엔진 재구성 (AC 윈도우 / 임계값 / 디바운스 / 모드)
+                engine = MetricsEngine(key.acWindowNs, key.tuning.toDetectorConfig())
+                engineKey = key
             }
             engine.baseline = _baseline.value
             engine.process(s)
@@ -87,7 +90,10 @@ class SignalHub(
         }
     }
 
-    fun clearBaseline() { _baseline.value = null }
+    /** 프로필에 저장된 영점 등을 외부에서 적용 */
+    fun setBaseline(b: Baseline?) { _baseline.value = b; engine.detector.reset() }
+
+    fun clearBaseline() = setBaseline(null)
 
     /** 다음 샘플을 하나 기다린다(센서가 살아있는지 확인용). */
     suspend fun awaitFirstSample(): MagSample = samples.first()

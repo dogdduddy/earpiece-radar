@@ -2,12 +2,20 @@ package com.dogdduddy.earpieceradar.signal
 
 enum class DetectionLevel { NONE, SUSPECT, DETECTED }
 
+/**
+ * 판정에 쓰는 Δ 의 종류.
+ *  - VECTOR: Δ = |B − B0|. 민감하지만 폰을 회전시키면 지구 자기장 방향 변화만으로 튄다 → 폰 고정 측정용.
+ *  - MAGNITUDE: Δ|B| = ||B−bias| − mag0|. 회전에 둔감 → 폰을 움직이며 스캔하는 용도.
+ */
+enum class DetectionMode { VECTOR, MAGNITUDE }
+
 data class DetectorConfig(
     val deltaThresholdUt: Double = 3.0,
     val zThreshold: Double = 5.0,
     val acThresholdUt: Double = 1.0,
     /** 같은 후보 레벨이 연속 N 샘플 유지될 때만 상태를 바꾼다. */
     val debounceSamples: Int = 5,
+    val mode: DetectionMode = DetectionMode.VECTOR,
 )
 
 /**

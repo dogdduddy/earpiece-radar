@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dogdduddy.earpieceradar.core.SignalHub
 import com.dogdduddy.earpieceradar.data.Settings
+import com.dogdduddy.earpieceradar.data.ProfileRepository
 import com.dogdduddy.earpieceradar.data.SettingsRepository
+import com.dogdduddy.earpieceradar.data.Tuning
 import com.dogdduddy.earpieceradar.sensor.SensorInfo
 import com.dogdduddy.earpieceradar.signal.Baseline
 import com.dogdduddy.earpieceradar.signal.MetricSample
@@ -30,12 +32,15 @@ data class MonitorUiState(
     val showZ: Boolean = true,
     val showMag: Boolean = true,
     val settings: Settings = Settings(),
+    val tuning: Tuning = Tuning(),
+    val profileName: String = "",
     val error: String? = null,
 )
 
 class MonitorViewModel(
     private val hub: SignalHub,
     private val settingsRepo: SettingsRepository,
+    private val profileRepo: ProfileRepository,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(MonitorUiState(sensorInfo = hub.sensorInfo, settings = settingsRepo.settings.value))
     val ui: StateFlow<MonitorUiState> = _ui.asStateFlow()
@@ -48,6 +53,7 @@ class MonitorViewModel(
         viewModelScope.launch { hub.baseline.collect { b -> _ui.update { it.copy(baseline = b) } } }
         viewModelScope.launch { hub.calibrationProgress.collect { p -> _ui.update { it.copy(calibrationProgress = p) } } }
         viewModelScope.launch { hub.error.collect { e -> _ui.update { it.copy(error = e) } } }
+        viewModelScope.launch { profileRepo.active.collect { p -> _ui.update { it.copy(tuning = p.tuning, profileName = p.name) } } }
         viewModelScope.launch {
             settingsRepo.settings.collect { s ->
                 chartBuffer.windowNs = s.chartWindowSeconds * 1_000_000_000L

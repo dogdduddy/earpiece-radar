@@ -39,9 +39,13 @@ class AndroidMagneticFieldSource(context: Context) : MagneticFieldSource {
         val s = sensor ?: run { close(IllegalStateException("지자기 센서 없음")); return@callbackFlow }
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
-                // UNCALIBRATED: values[0..2] = 보정 전 값, values[3..5] = 추정 iron bias (무시)
-                trySend(MagSample(event.timestamp, event.values[0], event.values[1], event.values[2], event.accuracy))
-                    .onFailure { /* 소비자가 느리면 드롭 */ }
+                // UNCALIBRATED: values[0..2] = 보정 전 값, values[3..5] = 추정 hard-iron bias (크기 모드에서 사용)
+                val v = event.values
+                val sample = if (v.size >= 6)
+                    MagSample(event.timestamp, v[0], v[1], v[2], event.accuracy, v[3], v[4], v[5])
+                else
+                    MagSample(event.timestamp, v[0], v[1], v[2], event.accuracy)
+                trySend(sample).onFailure { /* 소비자가 느리면 드롭 */ }
             }
             override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
         }

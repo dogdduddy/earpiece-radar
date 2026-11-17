@@ -138,7 +138,7 @@ fun ResultsScreen(vm: ResultsViewModel) {
 @Composable
 private fun TrialTable(trials: List<Trial>, onDelete: (Trial) -> Unit) {
     val fmt = remember { SimpleDateFormat("MM-dd HH:mm:ss", Locale.US) }
-    val cols = listOf("시각" to 96, "자석" to 80, "cm" to 40, "방향" to 64, "위치" to 44, "평균Δ" to 60, "최대Δ" to 60, "σΔ" to 52, "z̄" to 48, "AC" to 56, "σ0" to 52, "Hz" to 44, "메모" to 120)
+    val cols = listOf("시각" to 96, "자석" to 80, "cm" to 40, "방향" to 64, "위치" to 44, "평균Δ" to 60, "최대Δ" to 60, "Δ|B|" to 56, "σΔ" to 52, "z̄" to 48, "AC" to 56, "σ0" to 52, "Hz" to 44, "메모" to 120)
     Column(Modifier.horizontalScroll(rememberScrollState())) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("", Modifier.width(36.dp))
@@ -149,7 +149,7 @@ private fun TrialTable(trials: List<Trial>, onDelete: (Trial) -> Unit) {
             val s = t.stats; val c = t.config
             val cells = listOf(
                 fmt.format(Date(t.createdAtEpochMs)), c.magnetLabel, c.distanceCm.f(1), c.orientation.label, c.placement.label,
-                s.meanDelta.f(2), s.maxDelta.f(2), s.stdDelta.f(2), s.meanZ.f(1), s.acRms.f(3), t.baseline.sigma.f(3), s.sampleRateHz.f(0), c.note,
+                s.meanDelta.f(2), s.maxDelta.f(2), s.meanDeltaMag.f(2), s.stdDelta.f(2), s.meanZ.f(1), s.acRms.f(3), t.baseline.sigma.f(3), s.sampleRateHz.f(0), c.note,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { onDelete(t) }, modifier = Modifier.width(36.dp)) {

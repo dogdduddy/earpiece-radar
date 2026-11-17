@@ -14,6 +14,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dogdduddy.earpieceradar.ui.simple.SimpleScreen
+import com.dogdduddy.earpieceradar.ui.simple.SimpleViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,6 +47,19 @@ enum class Dest(val route: String, val label: String, val icon: ImageVector) {
 
 @Composable
 fun RadarApp(container: AppContainer) {
+    val settings by container.settingsRepository.settings.collectAsStateWithLifecycle()
+    if (!settings.developerMode) {
+        val vm: SimpleViewModel = viewModel(factory = factory {
+            SimpleViewModel(container.signalHub, container.settingsRepository, container.profileRepository)
+        })
+        SimpleScreen(vm)
+        return
+    }
+    DeveloperApp(container)
+}
+
+@Composable
+private fun DeveloperApp(container: AppContainer) {
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
@@ -70,12 +86,12 @@ fun RadarApp(container: AppContainer) {
     ) { inner ->
         NavHost(nav, startDestination = Dest.Monitor.route, modifier = Modifier.padding(inner)) {
             composable(Dest.Monitor.route) {
-                val vm: MonitorViewModel = viewModel(factory = factory { MonitorViewModel(container.signalHub, container.settingsRepository) })
+                val vm: MonitorViewModel = viewModel(factory = factory { MonitorViewModel(container.signalHub, container.settingsRepository, container.profileRepository) })
                 MonitorScreen(vm)
             }
             composable(Dest.Record.route) {
                 val vm: RecordViewModel = viewModel(factory = factory {
-                    RecordViewModel(container.signalHub, container.settingsRepository, container.trialRepository)
+                    RecordViewModel(container.signalHub, container.settingsRepository, container.trialRepository, container.profileRepository)
                 })
                 RecordScreen(vm)
             }
@@ -90,7 +106,7 @@ fun RadarApp(container: AppContainer) {
                 LocateScreen(vm)
             }
             composable(Dest.Settings.route) {
-                val vm: SettingsViewModel = viewModel(factory = factory { SettingsViewModel(container.settingsRepository) })
+                val vm: SettingsViewModel = viewModel(factory = factory { SettingsViewModel(container.settingsRepository, container.profileRepository, container.signalHub) })
                 SettingsScreen(vm)
             }
         }

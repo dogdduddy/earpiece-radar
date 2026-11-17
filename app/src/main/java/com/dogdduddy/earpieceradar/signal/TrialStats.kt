@@ -13,6 +13,8 @@ data class TrialStats(
     val meanZ: Double,
     val acRms: Double,
     val meanMagnitude: Double,
+    val meanDeltaMag: Double = 0.0,
+    val maxDeltaMag: Double = 0.0,
 ) {
     companion object {
         val EMPTY = TrialStats(0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
@@ -24,6 +26,7 @@ data class TrialStats(
         fun compute(samples: List<MagSample>, baseline: Baseline, acWindowNs: Long): TrialStats {
             if (samples.isEmpty()) return EMPTY
             var sumD = 0.0; var sumD2 = 0.0; var maxD = 0.0; var sumZ = 0.0; var sumMag = 0.0
+            var sumDm = 0.0; var maxDm = 0.0
             val ac = AcRmsEstimator(acWindowNs)
             var acSum2 = 0.0; var acN = 0
             for (s in samples) {
@@ -32,6 +35,8 @@ data class TrialStats(
                 if (d > maxD) maxD = d
                 sumZ += Metrics.zScore(d, baseline.sigma)
                 sumMag += s.magnitude
+                val dm = Metrics.deltaMagnitude(s, baseline)
+                sumDm += dm; if (dm > maxDm) maxDm = dm
                 val a = ac.add(s)
                 if (ac.isWarm) { acSum2 += a * a; acN++ }
             }
@@ -49,6 +54,8 @@ data class TrialStats(
                 meanZ = sumZ / n,
                 acRms = if (acN > 0) sqrt(acSum2 / acN) else ac.current(),
                 meanMagnitude = sumMag / n,
+                meanDeltaMag = sumDm / n,
+                maxDeltaMag = maxDm,
             )
         }
     }

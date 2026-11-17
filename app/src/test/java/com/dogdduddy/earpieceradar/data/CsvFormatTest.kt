@@ -33,13 +33,14 @@ class CsvFormatTest {
     fun `raw line matches header columns`() {
         val header = TrialRepository.RAW_HEADER.split(",")
         val s = MagSample(2_000_000_000L, 1.5f, -2.5f, 3.5f, 3)
-        val line = TrialRepository.rawLine("abc", 7, s, 1_000_000_000L, 4.0, 10.0)
+        val line = TrialRepository.rawLine("abc", 7, s, 1_000_000_000L, 4.0, 10.0, 0.5)
         val cols = line.split(",")
         assertEquals(header.size, cols.size)
         assertEquals("1000.000", cols[3])      // t_rel_ms
         assertEquals("1.5000", cols[4])
         assertEquals("4.0000", cols[9])
         assertEquals("10.000", cols[10])
+        assertEquals("0.5000", cols[15])
     }
 
     @Test

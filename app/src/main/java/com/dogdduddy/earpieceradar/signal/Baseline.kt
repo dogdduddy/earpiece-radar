@@ -8,6 +8,8 @@ import kotlin.math.sqrt
  * @param sigma 노이즈 표준편차. 벡터 편차의 RMS = sqrt(σx² + σy² + σz²) 로 정의한다.
  *   이렇게 두면 자석이 없을 때 Δ = |B − B0| 의 대표값이 σ 근처가 되어 z = Δ/σ 가 직관적이다.
  * @param sigmaAxis 축별 표준편차(정보 표시용)
+ * @param mag0 편향 제거 크기 |B − bias| 의 평균 (크기 모드 기준값)
+ * @param sigmaMag 그 크기의 표준편차 (크기 모드 z 계산용)
  */
 data class Baseline(
     val b0: Vec3,
@@ -16,6 +18,8 @@ data class Baseline(
     val sampleCount: Int,
     val durationNs: Long,
     val createdAtEpochMs: Long,
+    val mag0: Double = b0.norm,
+    val sigmaMag: Double = sigma,
 )
 
 /**
@@ -26,8 +30,8 @@ class BaselineCalibrator(private val durationNs: Long) {
     private var n = 0
     private var firstTs = 0L
     private var lastTs = 0L
-    private val mean = DoubleArray(3)
-    private val m2 = DoubleArray(3)
+    private val mean = DoubleArray(4)   // x, y, z, calMagnitude
+    private val m2 = DoubleArray(4)
 
     val sampleCount: Int get() = n
 
@@ -41,8 +45,8 @@ class BaselineCalibrator(private val durationNs: Long) {
         if (n == 0) firstTs = s.timestampNs
         lastTs = s.timestampNs
         n++
-        val v = doubleArrayOf(s.x.toDouble(), s.y.toDouble(), s.z.toDouble())
-        for (i in 0..2) {
+        val v = doubleArrayOf(s.x.toDouble(), s.y.toDouble(), s.z.toDouble(), s.calMagnitude.toDouble())
+        for (i in 0..3) {
             val delta = v[i] - mean[i]
             mean[i] += delta / n
             m2[i] += delta * (v[i] - mean[i])
@@ -54,6 +58,7 @@ class BaselineCalibrator(private val durationNs: Long) {
         val varX = m2[0] / (n - 1)
         val varY = m2[1] / (n - 1)
         val varZ = m2[2] / (n - 1)
+        val varM = m2[3] / (n - 1)
         return Baseline(
             b0 = Vec3(mean[0], mean[1], mean[2]),
             sigma = sqrt(varX + varY + varZ),
@@ -61,6 +66,8 @@ class BaselineCalibrator(private val durationNs: Long) {
             sampleCount = n,
             durationNs = lastTs - firstTs,
             createdAtEpochMs = nowEpochMs,
+            mag0 = mean[3],
+            sigmaMag = sqrt(varM),
         )
     }
 

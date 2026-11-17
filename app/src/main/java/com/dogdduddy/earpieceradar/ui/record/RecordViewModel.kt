@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dogdduddy.earpieceradar.core.SignalHub
 import com.dogdduddy.earpieceradar.data.Settings
+import com.dogdduddy.earpieceradar.data.ProfileRepository
 import com.dogdduddy.earpieceradar.data.SettingsRepository
 import com.dogdduddy.earpieceradar.data.Trial
 import com.dogdduddy.earpieceradar.data.TrialConfig
@@ -46,6 +47,7 @@ class RecordViewModel(
     private val hub: SignalHub,
     private val settingsRepo: SettingsRepository,
     private val trialRepo: TrialRepository,
+    private val profileRepo: ProfileRepository,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(RecordUiState(settings = settingsRepo.settings.value, sensorAvailable = hub.sensorInfo != null))
     val ui: StateFlow<RecordUiState> = _ui.asStateFlow()
@@ -125,6 +127,8 @@ class RecordViewModel(
                 val trial = trialRepo.save(
                     config = cfg,
                     sensorType = hub.sensorInfo?.typeLabel ?: "unknown",
+                    profileName = profileRepo.active.value.name,
+                    mode = profileRepo.active.value.tuning.mode,
                     baseline = baseline,
                     samples = samples,
                     stats = stats,

@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dogdduddy.earpieceradar.signal.DetectionLevel
+import com.dogdduddy.earpieceradar.signal.DetectionMode
 import com.dogdduddy.earpieceradar.ui.components.ChartSeries
 import com.dogdduddy.earpieceradar.ui.components.KeyValue
 import com.dogdduddy.earpieceradar.ui.components.LineChart
@@ -88,8 +89,8 @@ fun MonitorScreen(vm: MonitorViewModel) {
                 LineChart(
                     series = listOf(ChartSeries("Δ", RadarColors.delta, c.times, c.delta)),
                     xRange = -ui.settings.chartWindowSeconds.toFloat()..0f,
-                    yRange = 0f..maxOf(ui.settings.deltaThresholdUt.toFloat() * 1.5f, (c.delta.maxOrNull() ?: 0f) * 1.1f),
-                    hLines = listOf(ui.settings.deltaThresholdUt.toFloat() to RadarColors.levelDetected),
+                    yRange = 0f..maxOf(ui.tuning.deltaThresholdUt.toFloat() * 1.5f, (c.delta.maxOrNull() ?: 0f) * 1.1f),
+                    hLines = listOf(ui.tuning.deltaThresholdUt.toFloat() to RadarColors.levelDetected),
                     yLabel = "µT", showLegend = false,
                 )
             }
@@ -120,13 +121,19 @@ fun DetectionPanel(ui: MonitorUiState) {
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = if (ui.baseline != null && m != null) m.delta.f(2) else "—",
+            text = if (ui.baseline != null && m != null) m.deltaUsed.f(2) else "—",
             fontSize = 56.sp, fontWeight = FontWeight.Bold,
             color = level?.color() ?: MaterialTheme.colorScheme.onSurface,
         )
-        Text("Δ µT", style = MaterialTheme.typography.labelMedium)
+        Text(
+            (if (ui.tuning.mode == DetectionMode.MAGNITUDE) "Δ|B| µT (크기 모드)" else "Δ µT (벡터 모드)") +
+                "  ·  ${ui.profileName}",
+            style = MaterialTheme.typography.labelMedium,
+        )
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Metric(if (ui.tuning.mode == DetectionMode.MAGNITUDE) "Δ벡터" else "Δ|B|",
+                if (ui.baseline != null && m != null) (if (ui.tuning.mode == DetectionMode.MAGNITUDE) m.delta else m.deltaMag).f(2) else "—")
             Metric("z", if (ui.baseline != null && m != null) m.z.f(1) else "—")
             Metric("AC RMS µT", m?.acRms?.f(3) ?: "—")
             Metric("Hz", m?.hz?.f(0) ?: "—")
@@ -158,6 +165,7 @@ fun BaselineCard(ui: MonitorUiState, onCalibrate: () -> Unit, onClear: () -> Uni
                 KeyValue("|B0|", "${b.b0.norm.f(2)} µT")
                 KeyValue("σ (벡터 RMS)", "${b.sigma.f(3)} µT")
                 KeyValue("σ 축별", "${b.sigmaAxis.x.f(3)} / ${b.sigmaAxis.y.f(3)} / ${b.sigmaAxis.z.f(3)}")
+                KeyValue("|B−bias|₀ / σ|B|", "${b.mag0.f(2)} / ${b.sigmaMag.f(3)} µT")
                 KeyValue("샘플 수", "${b.sampleCount} (${(b.durationNs / 1e9).f(2)}s)")
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -180,7 +188,8 @@ fun SensorCard(ui: MonitorUiState) {
         if (m != null) {
             val s = m.sample
             KeyValue("x / y / z", "${s.x.f(2)} / ${s.y.f(2)} / ${s.z.f(2)} µT")
-            KeyValue("|B|", "${s.magnitude.f(2)} µT")
+            KeyValue("|B| raw / |B−bias|", "${s.magnitude.f(2)} / ${s.calMagnitude.f(2)} µT")
+            if (info.isUncalibrated) KeyValue("bias (x/y/z)", "${s.bx.f(1)} / ${s.by.f(1)} / ${s.bz.f(1)} µT")
             KeyValue("accuracy", accuracyLabel(s.accuracy))
         }
     }

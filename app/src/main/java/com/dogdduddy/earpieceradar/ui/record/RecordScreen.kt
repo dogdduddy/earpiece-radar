@@ -229,6 +229,7 @@ fun StatsTable(s: TrialStats, sigma: Double) {
     KeyValue("평균 Δ", "${s.meanDelta.f(3)} µT")
     KeyValue("최대 Δ", "${s.maxDelta.f(3)} µT")
     KeyValue("Δ 표준편차", "${s.stdDelta.f(3)} µT")
+    KeyValue("평균 Δ|B| / 최대", "${s.meanDeltaMag.f(3)} / ${s.maxDeltaMag.f(3)} µT")
     KeyValue("평균 z", s.meanZ.f(2))
     KeyValue("AC RMS", "${s.acRms.f(4)} µT")
     KeyValue("기준 σ", "${sigma.f(4)} µT")

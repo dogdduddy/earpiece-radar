@@ -6,6 +6,13 @@ object Metrics {
     /** Δ = |B − B0| : 벡터 차의 크기(µT). 크기끼리 빼지 않으므로 방향 변화도 잡힌다. */
     fun delta(sample: MagSample, baseline: Baseline): Double = (Vec3.of(sample) - baseline.b0).norm
 
+    /**
+     * Δ|B| = | |B − bias| − mag0 | : 편향 제거 크기의 변화(µT). 폰 회전에 둔감해 스캔(움직이며 측정)용.
+     * 자석이 지구 자기장과 수직 방향으로 더하면 크기 변화가 작게 나오는 한계가 있다.
+     */
+    fun deltaMagnitude(sample: MagSample, baseline: Baseline): Double =
+        kotlin.math.abs(sample.calMagnitude.toDouble() - baseline.mag0)
+
     /** z = Δ / σ. σ가 0이면 Δ>0일 때 무한대 대신 큰 값으로 제한. */
     fun zScore(delta: Double, sigma: Double): Double =
         if (sigma > 1e-9) delta / sigma else if (delta > 0) 1e6 else 0.0
