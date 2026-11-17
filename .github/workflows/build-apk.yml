@@ -1,0 +1,76 @@
+name: Build APK
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew test --no-daemon --console=plain
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon --console=plain
+
+      - name: Prepare files
+        id: prep
+        run: |
+          TAG="apk-$(echo "$GITHUB_REF_NAME" | tr '/' '-')"
+          SHORT="${GITHUB_SHA::7}"
+          cp app/build/outputs/apk/debug/app-debug.apk earpiece-radar-debug.apk
+          cp app/build/outputs/apk/debug/app-debug.apk "earpiece-radar-${SHORT}.apk"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: earpiece-radar-debug-${{ steps.prep.outputs.short }}
+          path: earpiece-radar-debug.apk
+
+      # 브랜치마다 하나의 프리릴리스(apk-<branch>)를 유지하고, 푸시마다 APK 를 덮어쓴다.
+      # 고정 다운로드 URL:
+      #   https://github.com/<owner>/<repo>/releases/download/<tag>/earpiece-radar-debug.apk
+      - name: Publish to rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.prep.outputs.tag }}
+          SHORT: ${{ steps.prep.outputs.short }}
+        run: |
+          set -e
+          git tag -f "$TAG"
+          git push -f origin "refs/tags/$TAG"
+          NOTES="Branch: \`$GITHUB_REF_NAME\`
+          Commit: $GITHUB_SHA
+          $(git log -1 --pretty=%s)
+
+          Built: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "APK ($GITHUB_REF_NAME) $SHORT" --notes "$NOTES" --prerelease
+            # 이전 커밋 해시 파일 정리
+            for a in $(gh release view "$TAG" --json assets -q '.assets[].name' | grep -E '^earpiece-radar-[0-9a-f]{7}\.apk$' || true); do
+              gh release delete-asset "$TAG" "$a" -y || true
+            done
+            gh release upload "$TAG" earpiece-radar-debug.apk "earpiece-radar-${SHORT}.apk" --clobber
+          else
+            gh release create "$TAG" --prerelease --title "APK ($GITHUB_REF_NAME) $SHORT" --notes "$NOTES" \
+              earpiece-radar-debug.apk "earpiece-radar-${SHORT}.apk"
+          fi

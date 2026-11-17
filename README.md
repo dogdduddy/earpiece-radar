@@ -63,3 +63,13 @@ com.dogdduddy.earpieceradar
 ## 범위 밖
 
 스토어 배포, 서버, 로그인, BLE 스캔(2단계: `MagneticFieldSource` 인터페이스만 분리해 둠).
+
+## APK 다운로드
+
+푸시마다 GitHub Actions 가 디버그 APK 를 빌드해 브랜치별 프리릴리스 `apk-<branch>` 에 올린다.
+폰 브라우저에서 아래 주소로 바로 받을 수 있다(최신 커밋으로 덮어씀).
+
+- https://github.com/dogdduddy/earpiece-radar/releases
+- 고정 URL 예: `https://github.com/dogdduddy/earpiece-radar/releases/download/apk-claude-beautiful-knuth-1l9t2t/earpiece-radar-debug.apk`
+
+디버그 서명이라 설치 시 "출처를 알 수 없는 앱" 허용이 필요하다.
